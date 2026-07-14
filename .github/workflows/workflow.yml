@@ -1,19 +1,39 @@
-name: Task1
+name: Task 2
 
-# Налаштування тригера: запуск при кожному push в гілку main
 on:
   push:
-    branches:
-      - main
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "develop" ]
 
 jobs:
-  say-hello:
-    runs-on: ubuntu-latest # Операційна система для віртуальної машини
+  test:
+    runs-on: ubuntu-latest
 
     steps:
-      # Завдання 3: Вивід повідомлення в консоль
-      - name: checkout code
+      # Крок для завантаження коду репозиторію на віртуальну машину
+      - name: Checkout repository
         uses: actions/checkout@v4
-       
-      - name: Print Hello Message
-        run: echo "Hello, GitHub Actions!"
+
+      # Крок для встановлення Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      # 1. Install dependencies from requirements.txt
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # 2. Run the tests with pytest and fail the workflow if coverage is below 70%
+      - name: Run tests with coverage
+        run: pytest --cov=myapp --cov-fail-under=70 --cov-report=html
+
+      # 3. Upload a coverage report as an artifact for inspection
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        # if: always() гарантує, що звіт завантажиться навіть якщо тести впадуть
+        if: always() 
+        with:
+          name: coverage-report
+          path: coverage.html
