@@ -1,0 +1,19 @@
+name: Task1
+
+# Налаштування тригера: запуск при кожному push в гілку main
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  say-hello:
+    runs-on: ubuntu-latest # Операційна система для віртуальної машини
+
+    steps:
+      # Завдання 3: Вивід повідомлення в консоль
+      - name: checkout code
+        uses: actions/checkout@v4
+       
+      - name: Print Hello Message
+        run: echo "Hello, GitHub Actions!"
