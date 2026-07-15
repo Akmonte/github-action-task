@@ -1,39 +1,74 @@
-name: Task 2
+name: Task3
 
 on:
-  push:
-    branches: [ "main", "develop" ]
   pull_request:
     branches: [ "develop" ]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-
     steps:
-      # Крок для завантаження коду репозиторію на віртуальну машину
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Крок для встановлення Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      # 1. Install dependencies from requirements.txt
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # 2. Run the tests with pytest and fail the workflow if coverage is below 70%
       - name: Run tests with coverage
         run: python -m pytest --cov=myapp --cov-fail-under=70 --cov-report=html
-      
-      # 3. Upload a coverage report as an artifact for inspection
-      - name: Upload coverage report
+
+      - name: Upload a coverage report as an artifact
         uses: actions/upload-artifact@v4
-        # if: always() гарантує, що звіт завантажиться навіть якщо тести впадуть
-        if: always() 
+        if: always()
         with:
           name: coverage-report
           path: htmlcov/
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.head_ref }}
+
+      - name: Check for existence README.md
+        run: |
+          if [ ! -f README.md ]; then
+            echo "README.md file does not exist."
+            touch README.md
+          else
+            echo "README.md file exists."
+          fi
+
+      - name: Check if the badge exists
+        run: |
+          if grep -qF "${{ secrets.BUILD_STATUS_BADGE }}" README.md; then
+            echo "Badge exists in README.md."
+          else
+            echo "Badge does not exist in README.md. Adding badge..."
+            echo "${{ secrets.BUILD_STATUS_BADGE }}" >> README.md
+          fi
+
+      - name: Commit README.md
+        run: |
+          git config --local user.email "${{ secrets.USER_EMAIL }}"
+          git config --local user.name "${{ secrets.USER_NAME }}"
+          
+          git add README.md
+          
+          if git diff --staged --quiet; then
+            echo "No changes to README.md. Skipping the commit."
+          else
+            git commit -m "Commit README.md"
+            git pull --rebase origin ${{ github.head_ref }}
+            git push origin ${{ github.head_ref }}
+          fi
